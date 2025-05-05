@@ -1,1 +1,87 @@
+# Code du capteur ultrason : le but est d'activer les leds en rouge lorsqu'une distance entre 0 et 7 cm est détectée pendant 1 seconde. 
+
+#include <FastLED.h>
+#include <LoRa.h>
+
+#define LED_PIN     4
+#define NUM_LEDS    21
+#define BRIGHTNESS  25
+#define LED_TYPE    WS2811
+#define COLOR_ORDER GRB
+CRGB leds[NUM_LEDS];
+
+const int trigPin = A3;
+const int echoPin = A2;
+float duration, distance;
+
+unsigned long startTime = 0;
+bool inRange = false;
+bool sosTriggered = false;
+
+void setup() {
+  delay(1000);
+  Serial.begin(115200);
+  Serial.println("Début du programme SOS");
+
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+
+  FastLED.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS);
+  FastLED.setBrightness(BRIGHTNESS);
+
+  if (!LoRa.begin(868E6)) {
+    Serial.println("Erreur LoRa !");
+    while (true);
+  }
+  Serial.println("LoRa OK");
+}
+
+void loop() {
+  // Lecture de la distance
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+
+  duration = pulseIn(echoPin, HIGH);
+  distance = (duration * 0.0343) / 2.0;
+
+  Serial.print("Distance mesurée: ");
+  Serial.print(distance);
+  Serial.println(" cm");
+
+  unsigned long now = millis();
+
+  if (distance >= 0.0 && distance <= 7.0) {
+    if (!inRange) {
+      // Première fois qu'on entre dans la bonne plage
+      startTime = now;
+      inRange = true;
+      sosTriggered = false;
+    } else {
+      // Déjà dans la bonne plage
+      if ((now - startTime >= 1000) && !sosTriggered) {
+        // Resté 1 seconde -> déclencher l'alarme
+        fill_solid(leds, NUM_LEDS, CRGB::Red);
+        FastLED.show();
+
+        LoRa.beginPacket();
+        LoRa.print("ALERTE Mme Banzandrier est en danger ! Elle se situe dans sa bijouterie : 9 Boulevard de la Villette");
+        LoRa.endPacket();
+        Serial.println("SOS envoyé par LoRa !");
+
+        sosTriggered = true;
+      }
+    }
+  } else {
+    // Pas dans la bonne plage -> tout réinitialiser
+    inRange = false;
+    sosTriggered = false;
+    fill_solid(leds, NUM_LEDS, CRGB::Black);
+    FastLED.show();
+  }
+
+  delay(100);
+}
 
