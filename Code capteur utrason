@@ -1,4 +1,5 @@
-# Code du capteur ultrason : le but est d'activer les leds en rouge lorsqu'une distance entre 0 et 7 cm est détectée pendant 1 seconde. 
+# Code du capteur ultrason : le but initial était d'allumer les leds en rouge lorsqu'une distance entre 0 et 7 cm est détectée pendant 1 seconde. 
+# Cependant, il était plus discret de ne pas allumer les leds.
 
 #include <FastLED.h>
 
@@ -72,10 +73,6 @@ void loop() {
     fill_solid(leds, NUM_LEDS, CRGB::Black);
     FastLED.show();
   }
-
-  delay(100);
-}
-
 
   delay(100);
 }
